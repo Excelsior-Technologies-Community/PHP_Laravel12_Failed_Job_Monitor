@@ -16,7 +16,7 @@ class FailedJobListener
         $jobName = $event->job->resolveName();
         $exception = $event->exception;
 
-        Mail::to('manasipatel0852@gmail.com')->send(
+        Mail::to('admin@gmail.com')->send(
             new FailedJobMail($jobName, $exception)
         );
     }
