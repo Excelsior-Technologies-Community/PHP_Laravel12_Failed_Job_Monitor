@@ -22,7 +22,6 @@
             padding: 20px;
         }
         
-        /* Header */
         .header {
             background: white;
             padding: 25px;
@@ -44,7 +43,6 @@
             font-size: 14px;
         }
         
-        /* Stats Bar */
         .stats-bar {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -79,7 +77,6 @@
             font-weight: 500;
         }
         
-        /* Toolbar */
         .toolbar {
             background: white;
             padding: 15px 20px;
@@ -115,6 +112,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
         
         .filter-group select, .filter-group button {
@@ -126,6 +124,18 @@
             cursor: pointer;
         }
         
+        .bulk-section {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        
         .btn {
             padding: 8px 16px;
             border: none;
@@ -134,6 +144,8 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
         }
         
         .btn-primary {
@@ -172,7 +184,24 @@
             background: #5a6268;
         }
         
-        /* Alert Messages */
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .btn-indigo {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .btn-indigo:hover {
+            background: #4338ca;
+        }
+        
         .alert {
             padding: 15px 20px;
             border-radius: 8px;
@@ -192,7 +221,6 @@
             border: 1px solid #f5c6cb;
         }
         
-        /* Table */
         .table-container {
             background: white;
             border-radius: 12px;
@@ -259,7 +287,6 @@
             font-size: 12px;
         }
         
-        /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
@@ -284,7 +311,6 @@
             border-color: #007bff;
         }
         
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -319,13 +345,11 @@
 
 <div class="container">
     
-    <!-- Header -->
     <div class="header">
         <h1>Failed Jobs Monitor</h1>
         <p>Track and manage failed queue jobs in real-time</p>
     </div>
     
-    <!-- Stats Bar -->
     <div class="stats-bar">
         <div class="stat-card">
             <div class="stat-number">{{ $jobs->total() }}</div>
@@ -341,7 +365,6 @@
         </div>
     </div>
     
-    <!-- Alert Messages -->
     @if(session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
@@ -354,14 +377,22 @@
         </div>
     @endif
     
-    <!-- Toolbar -->
     <div class="toolbar">
         <form method="GET" action="/failed-jobs" class="search-box">
             <input type="text" name="search" placeholder="Search by ID, queue, or error message..." value="{{ request('search') }}">
+            @if(request('queue'))
+                <input type="hidden" name="queue" value="{{ request('queue') }}">
+            @endif
+            @if(request('connection_filter'))
+                <input type="hidden" name="connection_filter" value="{{ request('connection_filter') }}">
+            @endif
         </form>
         
         <div class="filter-group">
-            <form method="GET" action="/failed-jobs" id="filter-form">
+            <form method="GET" action="/failed-jobs" style="display: flex; gap: 10px;">
+                @if(request('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                @endif
                 <select name="queue" onchange="this.form.submit()">
                     <option value="">All Queues</option>
                     @foreach($queues as $queue)
@@ -370,76 +401,93 @@
                         </option>
                     @endforeach
                 </select>
+
+                <select name="connection_filter" onchange="this.form.submit()">
+                    <option value="">All Connections</option>
+                    @foreach($connections as $conn)
+                        <option value="{{ $conn }}" {{ request('connection_filter') == $conn ? 'selected' : '' }}>
+                            {{ $conn }}
+                        </option>
+                    @endforeach
+                </select>
             </form>
             
+            <form action="/failed-jobs/auto-clean" method="POST" style="display: inline;">
+                @csrf
+                <button type="submit" class="btn btn-warning btn-sm">Auto Clean (>30 Days)</button>
+            </form>
+
+            <form action="/failed-jobs/auto-retry-engine" method="POST" style="display: inline;">
+                @csrf
+                <button type="submit" class="btn btn-indigo btn-sm">Run Auto-Retry</button>
+            </form>
+
             <a href="/failed-jobs/export" class="btn btn-secondary btn-sm">Export CSV</a>
             
-            <form method="POST" action="/failed-jobs/retry-all" style="display: inline;">
-                @csrf
-                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Retry all failed jobs?')">Retry All</button>
-            </form>
+            <a href="/failed-jobs/retry-all" class="btn btn-success btn-sm" onclick="return confirm('Retry all failed jobs?')">Retry All</a>
             
-            <form method="POST" action="/failed-jobs/delete-all" style="display: inline;">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete ALL failed jobs? This action cannot be undone.')">Delete All</button>
-            </form>
+            <a href="/failed-jobs/delete-all" class="btn btn-danger btn-sm" onclick="return confirm('Delete ALL failed jobs? This action cannot be undone.')">Delete All</a>
             
             <a href="/failed-jobs/stats" class="btn btn-primary btn-sm">View Statistics</a>
         </div>
     </div>
     
-    <!-- Jobs Table -->
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Queue</th>
-                    <th>Connection</th>
-                    <th>Error Message</th>
-                    <th>Failed At</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($jobs as $job)
-                <tr>
-                    <td>{{ $job->id }}</td>
-                    <td><span class="badge">{{ $job->queue }}</span></td>
-                    <td>{{ $job->connection }}</td>
-                    <td class="error-message" title="{{ $job->exception }}">
-                        {{ substr($job->exception, 0, 100) }}{{ strlen($job->exception) > 100 ? '...' : '' }}
-                    </td>
-                    <td>{{ \Carbon\Carbon::parse($job->failed_at)->format('Y-m-d H:i:s') }}</td>
-                    <td class="action-buttons">
-                        <form method="POST" action="/failed-jobs/retry/{{ $job->id }}" style="display: inline;">
-                            @csrf
-                            <button type="submit" class="btn btn-success btn-sm">Retry</button>
-                        </form>
-                        
-                        <form method="POST" action="/failed-jobs/delete/{{ $job->id }}" style="display: inline;">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this job?')">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                @empty
+    <form action="/failed-jobs/bulk" method="POST">
+        @csrf
+        <div class="bulk-section">
+            <span style="font-size: 14px; font-weight: 500; color: #495057;">Bulk Actions:</span>
+            <select name="action" required style="padding: 5px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+                <option value="">-- Select Action --</option>
+                <option value="retry">🔄 Bulk Retry</option>
+                <option value="delete">❌ Bulk Delete</option>
+            </select>
+            <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
                     <tr>
-                        <td colspan="6">
+                        <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAll" style="cursor: pointer; width: 16px; height: 16px;"></th>
+                        <th>ID</th>
+                        <th>Queue</th>
+                        <th>Connection</th>
+                        <th>Error Message</th>
+                        <th>Failed At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($jobs as $job)
+                    <tr>
+                        <td style="text-align: center;"><input type="checkbox" name="ids[]" value="{{ $job->id }}" class="job-checkbox" style="cursor: pointer; width: 16px; height: 16px;"></td>
+                        <td>{{ $job->id }}</td>
+                        <td><span class="badge">{{ $job->queue }}</span></td>
+                        <td>{{ $job->connection }}</td>
+                        <td class="error-message" title="{{ $job->exception }}">
+                            {{ substr($job->exception, 0, 100) }}{{ strlen($job->exception) > 100 ? '...' : '' }}
+                        </td>
+                        <td>{{ \Carbon\Carbon::parse($job->failed_at)->format('Y-m-d H:i:s') }}</td>
+                        <td class="action-buttons">
+                            <a href="/failed-jobs/{{ $job->id }}/retry" class="btn btn-success btn-sm">Retry</a>
+                            <a href="/failed-jobs/{{ $job->id }}/delete" class="btn btn-danger btn-sm" onclick="return confirm('Delete this job?')">Delete</a>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="7">
                             <div class="empty-state">
                                 <h3>No failed jobs found</h3>
                                 <p>All your queue jobs are running smoothly</p>
                             </div>
                         </td>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </form>
     
-    <!-- Pagination -->
     @if($jobs->hasPages())
         <div class="pagination">
             {{ $jobs->appends(request()->query())->links() }}
@@ -447,6 +495,13 @@
     @endif
     
 </div>
+
+<script>
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.job-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+</script>
 
 </body>
 </html>

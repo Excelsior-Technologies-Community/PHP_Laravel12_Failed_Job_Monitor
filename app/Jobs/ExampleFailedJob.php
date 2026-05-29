@@ -13,7 +13,6 @@ class ExampleFailedJob implements ShouldQueue
 
     public function handle()
     {
-        // This job will fail intentionally for demonstration
         throw new \Exception('This is a simulated job failure for testing purposes. Time: ' . now());
     }
 }

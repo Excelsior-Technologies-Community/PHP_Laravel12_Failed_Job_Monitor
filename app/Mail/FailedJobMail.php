@@ -14,21 +14,15 @@ class FailedJobMail extends Mailable
     public $exception;
     public $jobName;
 
-    /**
-     * Create a new message instance.
-     */
     public function __construct($jobName, Exception $exception)
     {
         $this->jobName = $jobName;
         $this->exception = $exception;
     }
 
-    /**
-     * Build the message.
-     */
     public function build()
     {
         return $this->subject('Laravel Failed Job Alert')
-                    ->view('emails.failed-job');
+            ->view('emails.failed-job');
     }
 }
