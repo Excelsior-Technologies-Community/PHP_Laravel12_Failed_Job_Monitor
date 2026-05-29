@@ -8,9 +8,6 @@ use App\Mail\FailedJobMail;
 
 class FailedJobListener
 {
-    /**
-     * Handle the event.
-     */
     public function handle(JobFailed $event): void
     {
         $jobName = $event->job->resolveName();
